@@ -1,0 +1,911 @@
+integer accNeg = 0;
+integer Handle;
+integer Handle2;
+integer private = TRUE;
+integer listening = FALSE;
+integer effectFlags;
+integer running;
+integer colorInterpolation =        FALSE;
+integer sizeInterpolation =         FALSE;
+integer glowEffect =                FALSE;
+integer followVelocity =            FALSE;
+integer windEffect =                FALSE;
+integer bounceEffect =              FALSE;
+integer followSource =              FALSE;
+integer followTarget =              FALSE;
+vector  startColor =                <0, 0.0, 0>;
+vector  endColor =                  <0, 0.0, 0>;
+float   startAlpha =                1.0;
+float   endAlpha =                  1.0;
+vector  startSize =                 <0.5, 0.5, 0.0>;
+vector  endSize =                   <0.5, 0.5, 0.0>;
+string  texture =                   "";
+float   particleLife =              1;
+float   systemLife =                0.0;
+float   emissionRate =              0.5;
+integer partPerEmission =           10;
+float   radius =                    0.10;
+float   beginAngle =                0.0;
+float   endAngle =                  TWO_PI;
+vector  omega =                     <0.0, 0.0, 0.0>;
+float   minSpeed =                  0.2;
+float   maxSpeed =                  1;
+vector  acceleration =              <0.0, 0.0, 0.5>;
+
+integer pattern =                   PSYS_SRC_PATTERN_ANGLE_CONE;
+key     target;
+
+integer increment = 1;
+integer increment2 = 1;
+vector startcolortemp;
+vector endcolortemp;
+float blueamt = 0;
+float redamt = 0;
+float greenamt = 0;
+float eredamt = 0;
+float eblueamt = 0;
+float egreenamt = 0;
+float startsizexamt = 0;
+float startsizeyamt = 0;
+float endsizexamt = 0;
+float endsizeyamt = 0;
+integer listeningForTarget = FALSE;
+integer listeningForTexture = FALSE;
+string outgoing;
+vector acceleration2 = <0,0,0>;
+integer accx = 0;
+integer accy = 0;
+integer accz = 0;
+
+
+vector addVector(vector value, float limit, integer which, integer channel)
+{
+    string tempvector;
+    if (which == 1)
+    {
+        float tempincrem = increment * .01;
+        if (value.x + tempincrem > limit)
+        {
+            llWhisper(0, "Exceeding limits, setting to maximum.");
+            value.x = limit;
+            llSay(channel,(string)value);
+        }
+        else
+        {
+            value.x = value.x + tempincrem;
+            llSay(channel,(string)value);
+        }
+    }
+    else if (which == 2)
+    {
+        float tempincrem = increment * .01;
+        if (value.y + tempincrem > limit)
+        {
+            llWhisper(0, "Exceeding limits, setting to maximum.");
+            value.y = limit;
+            llSay(channel,(string)value);
+        }
+        else
+        {
+            value.y = value.y + tempincrem;
+            llSay(channel,(string)value);
+        }
+    }
+    else if (which == 3)
+    {
+        float tempincrem = increment * .01;
+        if (value.z + tempincrem > limit)
+        {
+            llWhisper(0, "Exceeding limits, setting to maximum.");
+            value.z = limit;
+            llSay(channel,(string)value);
+        }
+        else
+        {
+            value.z = value.z + tempincrem;
+            llSay(channel,(string)value);
+        }
+    }
+    return value;
+     
+}  
+
+  vector subVector(vector value, float limit, integer which, integer channel)
+{
+    string tempvector;
+    if (which == 1)
+    {
+        float tempincrem = increment * .01;
+        if (value.x - tempincrem < limit)
+        {
+            llWhisper(0, "Exceeding limits, setting to minimum.");
+            value.x = limit;
+            llSay(channel,(string)limit);
+        }
+        else
+        {
+            value.x = value.x - tempincrem;
+            llSay(channel,(string)value);
+        }
+    }
+    else if (which == 2)
+    {
+        float tempincrem = increment * .01;
+        if (value.y - tempincrem < limit)
+        {
+            llWhisper(0, "Exceeding limits, setting to minimum.");
+            value.y = limit;
+            llSay(channel,(string)value);
+        }
+        else
+        {
+            value.y = value.y - tempincrem;
+            llSay(channel,(string)value);
+        }
+    }
+    else if (which == 3)
+    {
+        float tempincrem = increment * .01;
+        if (value.z - tempincrem < limit)
+        {
+            llWhisper(0, "Exceeding limits, setting to minimum.");
+            value.z = limit;
+            llSay(channel,(string)value);
+        }
+        else
+        {
+            value.z = value.z - tempincrem;
+            llSay(channel,(string)value);
+        }
+    }
+    return value;
+     
+}    
+  
+float tooLarge(float value,float limit) 
+{
+    if (value + increment*.01 > limit)
+    {
+        llWhisper(0, "Value exceeding limits.");
+        llWhisper(0, "Setting to " + (string)limit);
+        return limit;
+    }
+    else
+    {
+        return value + (increment*.01);
+    }
+}
+
+float tooSmall(float value, float limit)
+{
+    if (value - increment*.01 < limit)
+    {
+        llWhisper(0, "Value exceeding limits.");
+        llWhisper(0, "Setting to 0.0");
+        return 0;
+    }
+    else
+    {
+        return value - (increment *.01);
+    }
+}
+
+float sendFloat(float value, integer channel)
+{
+        string tempvalue = (string)value;
+        integer x = llSubStringIndex(tempvalue,".");
+        integer n = llStringLength(tempvalue);
+        x = x + 3;
+        n = n--;
+        tempvalue = llDeleteSubString(tempvalue,x,n);
+        n = llStringLength(tempvalue);
+        if (n == 4)
+        {
+            tempvalue = "0" + tempvalue;
+            llSay(channel,tempvalue);
+        }
+        else if (n == 5)
+        {
+            llSay(channel,tempvalue);
+        }
+        else
+        {
+            llSay(0, (string)llStringLength(tempvalue));
+        } 
+        return -1;       
+}
+
+integer broadcastInteger(string prefix, integer int)
+{
+    string collab = prefix + (string)int;
+    llSay(401, collab);
+    return 0;
+}
+
+integer broadcastVector(string prefix, vector vec)
+{
+    string collab = prefix + (string)vec;
+    llSay(401,collab);
+    return 0;
+}
+
+integer broadcastFloat(string prefix, float flo)
+{
+    string collab = prefix + (string)flo;
+    llSay(401,collab);
+    return 0;
+}
+
+integer broadcastString(string prefix, string str)
+{
+    string collab = prefix + str;
+    llSay(401,collab);
+    return 0;
+}
+
+integer broadcastAcceleration(string prefix, vector vec)
+{
+    if (accx == 1)
+        vec.x = vec.x * -1;
+    if (accy == 1)
+        vec.y = vec.y * -1;
+    if (accz == 1)
+        vec.z = vec.z * -1;
+    string collab = prefix + (string)vec;
+    llSay(401,collab);
+    
+    return 0;
+}
+
+default
+{
+    state_entry()
+    {
+
+    }
+    
+
+    link_message(integer sender_num, integer num, string str, key id)
+    {
+        
+        if (str == "CI")
+        {
+            if (colorInterpolation == TRUE)
+            {
+                colorInterpolation = FALSE;
+                llMessageLinked(2,0,"CI FALSE","");             
+            }
+            else if (colorInterpolation == FALSE)
+            {
+                colorInterpolation = TRUE;
+                llMessageLinked(2,0,"CI TRUE","");
+            }
+            broadcastInteger("CIN",colorInterpolation);
+        }
+        else if (str == "SI")
+        {
+            if (sizeInterpolation == TRUE)
+            {
+                sizeInterpolation = FALSE;
+                llMessageLinked(2,0,"SI FALSE","");                
+            }
+            else if (sizeInterpolation == FALSE)
+            {
+                sizeInterpolation = TRUE;
+                llMessageLinked(2,0,"SI TRUE","");
+            }
+            broadcastInteger("SIN",sizeInterpolation);
+        }
+        else if (str == "FV")
+        {
+            if (followVelocity == TRUE)
+            {
+                followVelocity = FALSE;
+                llMessageLinked(2,0,"FV FALSE","");                
+            }
+            else if (followVelocity == FALSE)
+            {
+                followVelocity = TRUE;
+                llMessageLinked(2,0,"FV TRUE","");
+            }
+            broadcastInteger("FVE",followVelocity);
+        }
+        else if (str == "BOUNCE")
+        {
+            if (bounceEffect == TRUE)
+            {
+                bounceEffect = FALSE;
+                llMessageLinked(2,0,"BOUNCE FALSE","");                
+            }
+            else if (bounceEffect == FALSE)
+            {
+                bounceEffect = TRUE;
+                llMessageLinked(2,0,"BOUNCE TRUE","");
+            }
+            broadcastInteger("BOU",bounceEffect);
+        }
+        else if (str == "WIND")
+        {
+            if (windEffect == TRUE)
+            {
+                windEffect = FALSE;
+                llMessageLinked(2,0,"WIND FALSE","");                
+            }
+            else if (windEffect == FALSE)
+            {
+                windEffect = TRUE;
+                llMessageLinked(2,0,"WIND TRUE","");
+            }
+            broadcastInteger("WIN",windEffect);
+        }
+        else if (str == "GLOW")
+        {
+            if (glowEffect == TRUE)
+            {
+                glowEffect = FALSE;
+                llMessageLinked(2,0,"GLOW FALSE","");                
+            }
+            else if (glowEffect == FALSE)
+            {
+                glowEffect = TRUE;
+                llMessageLinked(2,0,"GLOW TRUE","");
+            }
+            broadcastInteger("GLO",glowEffect);
+        }
+        else if (str == "FS")
+        {
+            if (followSource == TRUE)
+            {
+                followSource = FALSE;
+                llMessageLinked(2,0,"FS FALSE","");                
+            }
+            else if (followSource == FALSE)
+            {
+                followSource = TRUE;
+                llMessageLinked(2,0,"FS TRUE","");
+            }
+            broadcastInteger("FSO",followSource);
+        }
+        else if (str == "FT")
+        {
+            if (followTarget == TRUE)
+            {
+                followTarget = FALSE;
+                llMessageLinked(2,0,"FT FALSE","");                
+            }
+            else if (followTarget == FALSE)
+            {
+                followTarget = TRUE;
+                llMessageLinked(2,0,"FT TRUE","");
+            }
+            broadcastInteger("FTA",followTarget);
+        }
+        else if (str == "INC+")
+        {
+            if (increment == 1)
+            {
+                increment = 5;
+                llSay(0,"Increment increased to 5.");
+            }
+            else if (increment == 5)
+            {
+                increment = 10;
+                llSay(0,"Increment increased to 10.");
+            }
+            else if (increment == 10)
+            {
+                increment = 20;
+                llSay(0,"Increment increased to 20.");
+            }
+            else if (increment == 20)
+            {
+                increment = 50;
+                llSay(0,"Increment increased to 50.");
+            }
+            else if (increment == 50)
+            {
+                increment = 100;
+                llSay(0,"Increment increased to 100.");
+            }
+            else if (increment == 100)
+            {
+                llSay(0,"Increment cannot be increased further!");
+            }
+        }
+        else if (str == "INC-")
+        {
+            if (increment == 1)
+            {
+                llSay(0,"Increment cannot be decreased further.");
+            }
+            else if (increment == 5)
+            {
+                increment = 1;
+                llSay(0,"Increment decreased to 1.");
+            }
+            else if (increment == 10)
+            {
+                increment = 5;
+                llSay(0,"Increment decreased to 5.");
+            }
+            else if (increment == 20)
+            {
+                increment = 10;
+                llSay(0,"Increment decreased to 10.");
+            }
+            else if (increment == 50)
+            {
+                increment = 20;
+                llSay(0,"Increment decreased to 20.");
+            }
+            else if (increment == 100)
+            {
+                increment = 50;
+                llSay(0,"Increment decreased to 50.");
+            }
+        }
+        else if (str == "SB+"){
+            startColor = addVector(startColor,1,3,342);
+            broadcastVector("SCO",startColor);}     
+            
+        else if (str == "SG+"){
+            startColor = addVector(startColor,1,2,342);
+            broadcastVector("SCO",startColor);}                
+
+        else if (str == "SR+"){
+            startColor = addVector(startColor,1,1,342);
+            broadcastVector("SCO",startColor);}                        
+                      
+        else if (str == "SB-"){
+            startColor = subVector(startColor,0,3,342);
+            broadcastVector("SCO",startColor);}                
+            
+        else if (str == "SG-"){
+            startColor = subVector(startColor,0,2,342);
+            broadcastVector("SCO",startColor);}      
+
+        else if (str == "SR-"){
+            startColor = subVector(startColor,0,1,342);
+            broadcastVector("SCO",startColor);}      
+
+        else if (str == "EB+"){
+            endColor = addVector(endColor,1,3,343);
+            broadcastVector("ECO",endColor);}                
+
+        else if (str == "EG+"){
+            endColor = addVector(endColor,1,2,343);
+            broadcastVector("ECO",endColor);}
+                
+        else if (str == "ER+"){
+            endColor = addVector(endColor,1,1,343);
+            broadcastVector("ECO",endColor);}
+                            
+        else if (str == "EB-"){
+            endColor = subVector(endColor,0,3,343);
+            broadcastVector("ECO",endColor);} 
+
+        if (str == "EG-"){
+            endColor = subVector(endColor,0,2,343);
+            broadcastVector("ECO",endColor);}     
+        if (str == "ER-"){
+            endColor = subVector(endColor,0,1,343);
+            broadcastVector("ECO",endColor);}
+        if (str == "SA+")
+        {
+            startAlpha = tooLarge(startAlpha,1);
+            sendFloat(startAlpha,344);
+            broadcastFloat("SAL",startAlpha);
+        }
+        if (str == "SA-")
+        {
+            startAlpha = tooSmall(startAlpha,0);
+            sendFloat(startAlpha,344);
+            broadcastFloat("SAL",startAlpha);
+        }
+        if (str == "EA+")
+        {
+            endAlpha = tooLarge(endAlpha,1);
+            sendFloat(endAlpha,345);
+            broadcastFloat("EAL",endAlpha);
+        }
+        if (str == "EA-")
+        {
+            endAlpha = tooSmall(endAlpha,0);
+            sendFloat(endAlpha,345);
+            broadcastFloat("EAL",endAlpha);
+        }
+        if (str == "PSX1+"){
+            startSize = addVector(startSize,9.99,1,346);
+            broadcastVector("PSS",startSize);}
+            
+        if (str == "PSX1-"){
+            startSize = subVector(startSize,0,1,346);
+            broadcastVector("PSS",startSize);}
+            
+        if (str == "PSY1+"){
+            startSize = addVector(startSize,9.99,2,346);
+            broadcastVector("PSS",startSize);}
+            
+        if (str == "PSY1-"){
+            startSize = subVector(startSize,0,2,346);
+            broadcastVector("PSS",startSize);}
+            
+        if (str == "PSX2+"){
+            endSize = addVector(endSize,9.99,1,347);
+            broadcastVector("PES",endSize);}
+            
+        if (str == "PSX2-"){
+            endSize = subVector(endSize,0,1,347);
+            broadcastVector("PES",endSize);}
+            
+        if (str == "PSY2+"){
+            endSize = addVector(endSize,9.99,2,347);
+            broadcastVector("PES",endSize);} 
+            
+        if (str == "PSY2-"){
+            endSize = subVector(endSize,0,2,347);
+            broadcastVector("PES",endSize);}
+            
+        if (str == "FTS")
+        {
+            if (listeningForTarget == FALSE)
+            {
+                llWhisper(0, "Receiving UUID now.");
+                Handle2 = llListen(42,"",NULL_KEY,"");
+                listeningForTarget = TRUE;
+            }
+            else
+            {
+                llWhisper(0, "Cancelling listen.");
+                llListenRemove(Handle2);
+                listeningForTarget = FALSE;
+            }
+            
+        }
+        if (str == "PL+")
+        {
+                particleLife = tooLarge(particleLife,99.99);
+                float blah = sendFloat(particleLife, 348);
+                broadcastFloat("PLI",particleLife);                
+        }
+        if (str == "PL-")
+        {
+                particleLife = tooSmall(particleLife,0);
+                float blah = sendFloat(particleLife, 348);
+                broadcastFloat("PLI",particleLife);
+        }
+        if (str == "SL+")
+        {
+                systemLife = tooLarge(systemLife,99.99);
+                float blah = sendFloat(systemLife,349);
+                broadcastFloat("SLI",systemLife);
+        }
+        if (str == "SL-")
+        {
+                systemLife = tooSmall(systemLife,0);
+                float blah = sendFloat(systemLife,349);
+                broadcastFloat("SLI",systemLife);
+        }
+        if (str == "ERA+")
+        {
+             emissionRate = tooLarge(emissionRate,99.99);
+            float blah = sendFloat(emissionRate,350);
+            broadcastFloat("ERA",emissionRate);
+        }
+        if (str == "ERA-")
+        {
+             emissionRate = tooSmall(emissionRate,0);
+             float blah = sendFloat(emissionRate,350);
+             broadcastFloat("ERA",emissionRate);
+        }
+        if (str == "PPE+")
+        {
+            if ((partPerEmission + increment) > 99)
+            {
+                llWhisper(0, "Too many particles per emission.");
+                llWhisper(0, "Setting to 99, the maximum.");
+                partPerEmission = 99;
+                llSay(351, (string)partPerEmission);
+                broadcastInteger("PPE",partPerEmission);
+            }
+            else
+            {
+                partPerEmission = partPerEmission + increment;
+                string temppart = (string)partPerEmission;
+                if (llStringLength(temppart) == 1)
+                    temppart = "0" + temppart;
+                llSay(351, temppart);
+                broadcastInteger("PPE",partPerEmission);
+            }
+        }
+        if (str == "PPE-")
+        {
+            if ((partPerEmission - increment) < 0)
+            {
+                llWhisper(0, "Too few particles per emission.");
+                llWhisper(0, "Setting to 0, the minimum.");
+                partPerEmission = 0;
+                llSay(351, (string)partPerEmission);
+                broadcastInteger("PPE",partPerEmission);
+            }
+            else
+            {
+                
+                partPerEmission = partPerEmission - increment;
+                string temppart = (string)partPerEmission;
+                if (llStringLength(temppart) == 1)
+                    temppart = "0" + temppart;
+                llSay(351, temppart);
+                broadcastInteger("PPE",partPerEmission);
+            }
+        }
+        if (str == "R+")
+        {
+                radius = tooLarge(radius,10.00);
+                float blah = sendFloat(radius,352);
+                broadcastFloat("RAD",radius);
+        }
+        if (str == "R-")
+        {
+            radius = tooSmall(radius,0);
+            float blah = sendFloat(radius,352);
+            broadcastFloat("RAD",radius);
+        }
+        if (str == "BA+")
+        {
+                integer tempangle = llRound(beginAngle * RAD_TO_DEG);
+                if ((tempangle + increment) > 360)
+                {
+                    llWhisper(0, "Angle too high! Setting to 360.");
+                    llSay(353, "360");
+                    beginAngle = TWO_PI;
+                    broadcastFloat("BAN",beginAngle);
+                }
+                else
+                {
+                    tempangle = tempangle + increment;
+                    string anglestr = (string)tempangle;
+                    if (llStringLength(anglestr) == 1)
+                        anglestr = "00" + anglestr;
+                    if (llStringLength(anglestr) == 2)
+                        anglestr = "0" + anglestr;
+                    llSay(353, anglestr);
+                    beginAngle = tempangle * DEG_TO_RAD;
+                    broadcastFloat("BAN",beginAngle);
+                }
+        }
+        if (str == "BA-")
+        {
+                integer tempangle = llRound(beginAngle * RAD_TO_DEG);
+                if ((tempangle - increment) < 0)
+                {
+                    llWhisper(0, "Angle too low! Setting to 0.");
+                    llSay(353, "000");
+                    beginAngle = 0;
+                    broadcastFloat("BAN",beginAngle);
+                }
+                else
+                {
+                    tempangle = tempangle - increment;
+                    string anglestr = (string)tempangle;
+                    if (llStringLength(anglestr) == 1)
+                        anglestr = "00" + anglestr;
+                    if (llStringLength(anglestr) == 2)
+                        anglestr = "0" + anglestr;
+                    llSay(353, anglestr);
+                    beginAngle = tempangle * DEG_TO_RAD;
+                    broadcastFloat("BAN",beginAngle);
+                }
+        }
+        if (str == "EAN+")
+        {
+                integer tempangle = llRound(endAngle * RAD_TO_DEG);
+                if ((tempangle + increment) > 360)
+                {
+                    llWhisper(0, "Angle too high! Setting to 360.");
+                    llSay(354, "360");
+                    endAngle = TWO_PI;
+                    broadcastFloat("EAN",endAngle);  
+                }
+                else
+                {
+                    tempangle = tempangle + increment;
+                    string anglestr = (string)tempangle;
+                    if (llStringLength(anglestr) == 1)
+                        anglestr = "00" + anglestr;
+                    if (llStringLength(anglestr) == 2)
+                        anglestr = "0" + anglestr;
+                    llSay(354, anglestr);
+                    endAngle = tempangle * DEG_TO_RAD;
+                    broadcastFloat("EAN",endAngle);
+                }
+        }
+        if (str == "EAN-")
+        {
+                integer tempangle = llRound(endAngle * RAD_TO_DEG);
+                if ((tempangle - increment) < 0)
+                {
+                    llWhisper(0, "Angle too low! Setting to 0.");
+                    llSay(354, "000");
+                    endAngle = 0;
+                    broadcastFloat("EAN",endAngle);
+                }
+                else
+                {
+                    tempangle = tempangle - increment;
+                    string anglestr = (string)tempangle;
+                    if (llStringLength(anglestr) == 1)
+                        anglestr = "00" + anglestr;
+                    if (llStringLength(anglestr) == 2)
+                        anglestr = "0" + anglestr;
+                    llSay(354, anglestr);
+                    endAngle = tempangle * DEG_TO_RAD;
+                    broadcastFloat("EAN",endAngle);
+                }
+        }
+        if (str == "AVX+"){
+            omega = addVector(omega,9.99,1, 355);
+            broadcastVector("AVE",omega);}                                             
+
+        if (str == "AVX-"){
+            omega = subVector(omega,0,1,355);
+            broadcastVector("AVE",omega);} 
+
+        if (str == "AVY+"){
+            omega = addVector(omega, 9.99,2,355);
+            broadcastVector("AVE",omega);} 
+
+        if (str == "AVY-"){
+            omega = subVector(omega, 0,2,355);
+            broadcastVector("AVE",omega);} 
+
+        if (str == "AVZ+"){
+            omega = addVector(omega, 9.99,3,355);
+            broadcastVector("AVE",omega);} 
+
+        if (str == "AVZ-"){
+            omega = subVector(omega, 0,3,355);
+            broadcastVector("AVE",omega);} 
+
+        if (str == "ACXN")
+        {
+            if (accx == 0)
+                accx = 1;
+            else if (accx == 1)
+                accx = 0;
+            broadcastAcceleration("ACC",acceleration);
+        }            
+            
+        if (str == "ACX+"){
+            acceleration = addVector(acceleration, 9.99,1,356);
+            broadcastAcceleration("ACC",acceleration);
+            }
+
+        if (str == "ACX-"){
+            acceleration = subVector(acceleration, 0,1,356);
+            broadcastAcceleration("ACC",acceleration);} 
+
+        if (str == "ACYN")
+        {
+            if (accy == 0)
+                accy = 1;
+            else if (accy == 1)
+                accy = 0;
+            broadcastAcceleration("ACC",acceleration);
+        }
+        if (str == "ACY+"){
+            acceleration = addVector(acceleration, 9.99,2,356);
+            broadcastAcceleration("ACC",acceleration);}
+
+        if (str == "ACY-"){
+            acceleration = subVector(acceleration, 0,2,356);
+            broadcastAcceleration("ACC",acceleration);}
+
+        if (str == "ACZN")
+        {
+            if (accz == 0)
+                accz = 1;
+            else if (accz == 1)
+                accz = 0;
+            broadcastAcceleration("ACC",acceleration);
+        }
+        
+        if (str == "ACZ+"){
+            acceleration = addVector(acceleration, 9.99,3,356);
+            broadcastAcceleration("ACC",acceleration);}
+
+        if (str == "ACZ-"){
+            acceleration = subVector(acceleration, 0,3,356);
+            broadcastAcceleration("ACC",acceleration);}
+
+        if (str == "MINS+")
+        {
+            minSpeed = tooLarge(minSpeed,20);
+            float blah = sendFloat(minSpeed,357);
+            broadcastFloat("MSP",minSpeed);
+        }
+        if (str == "MINS-")
+        {
+            minSpeed = tooSmall(minSpeed,0);
+            float blah = sendFloat(minSpeed,357);
+            broadcastFloat("MSP",minSpeed);
+        }
+        if (str == "MAXS+")
+        {
+            maxSpeed = tooLarge(maxSpeed,20);
+            float blah = sendFloat(maxSpeed,358);
+            broadcastFloat("MXS",maxSpeed);
+        }
+        if (str == "MAXS-")
+        {
+            maxSpeed = tooSmall(maxSpeed,0);
+            float blah = sendFloat(maxSpeed,358);
+            broadcastFloat("MXS",maxSpeed);
+        }
+        if (str == "TEXT")
+        {
+            if (listeningForTexture == FALSE)
+            {
+                llWhisper(0, "Receiving UUID now.");
+                Handle2 = llListen(43,"",NULL_KEY,"");
+                listeningForTexture = TRUE;
+            }
+            else
+            {
+                llWhisper(0, "Cancelling listen.");
+                llListenRemove(Handle2);
+                listeningForTexture = FALSE;
+            }
+            
+        }
+        if (str == "PATT")
+        {
+            if (pattern == PSYS_SRC_PATTERN_DROP)
+            {
+                pattern = PSYS_SRC_PATTERN_EXPLODE;
+                llWhisper(0, "Pattern set to PSYS_SRC_PATTERN_EXPLODE");
+            }
+            else if (pattern == PSYS_SRC_PATTERN_EXPLODE)
+            {
+                pattern = PSYS_SRC_PATTERN_ANGLE;
+                llWhisper(0, "Pattern set to PSYS_SRC_PATTERN_ANGLE");
+            }
+            else if (pattern == PSYS_SRC_PATTERN_ANGLE)
+            {
+                pattern = PSYS_SRC_PATTERN_ANGLE_CONE;
+                llWhisper(0, "Pattern set to PSYS_SRC_PATTERN_ANGLE_CONE");
+            }
+            else if (pattern == PSYS_SRC_PATTERN_ANGLE_CONE)
+            {
+                pattern = PSYS_SRC_PATTERN_ANGLE_CONE_EMPTY;
+                llWhisper(0, "Pattern set to PSYS_SRC_PATTERN_ANGLE_CONE_EMPTY");
+            }
+            else if (pattern == PSYS_SRC_PATTERN_ANGLE_CONE_EMPTY)
+            {
+                pattern = PSYS_SRC_PATTERN_DROP;
+                llWhisper(0, "Pattern set to PSYS_SRC_PATTERN_DROP");
+            }
+            broadcastInteger("PAT",pattern);                                      
+        }       
+    } 
+    
+    listen(integer channel, string name, key id, string message)
+    {
+        if (channel == 42)
+        {
+            target = message;
+            llWhisper(0, "UUID received, stopping listen.");
+            broadcastString("FTD", target);
+            listeningForTarget = FALSE;
+            llListenRemove(Handle2);
+        }
+        if (channel ==  43)
+        {
+            texture = message;
+            llWhisper(0, "UUID received, set as texture.");
+            listeningForTexture = FALSE;
+            broadcastString("TXD", texture);
+            llListenRemove(Handle2);
+        }        
+    }
+}      
