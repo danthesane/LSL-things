@@ -1,0 +1,349 @@
+key notecardkey;
+integer cycling = 0;
+float cycledelay = 0.0;
+integer cyclelength = 0;
+list cyclelist = [];
+integer currentcycle = 0;
+string listofcolors = "";
+integer alldone = 0;
+integer readyfornext = 1;
+integer currentlineno = 0;
+string currentline;
+integer Handle;
+integer notelines = 0;
+list colorlist = [];
+list startcolors = [];
+list endcolors = [];
+integer private = TRUE;
+integer listening = FALSE;
+integer effectFlags;
+integer running;
+integer colorInterpolation =        TRUE;
+vector  startColor =                <1.0, 0.75, 1.0>;
+vector  endColor =                  <1.0, 0.0, 1.0>;
+float   startAlpha =                1.0;
+float   endAlpha =                  0.00;
+integer glowEffect =                TRUE;
+integer sizeInterpolation =         TRUE;
+vector  startSize =                 <0.35, 0.2, 0.0>;
+vector  endSize =                   <0.2, 0.5, 0.0>;
+integer followVelocity =            FALSE;
+string  texture =                   "";
+float   particleLife =              1.2;
+float   SystemLife =                0.0;
+float   emissionRate =              .15;
+integer partPerEmission =           10;
+float   radius =                    0.05;
+float   beginAngle =                0.0;
+float   endAngle =                  TWO_PI;
+vector  omega =                     <0.0, 0.0, 0.0>;
+float   minSpeed =                  0.0;
+float   maxSpeed =                  0.15;
+vector  acceleration =              <0.0, 0.0, 1.0>;
+integer windEffect =                FALSE;
+integer bounceEffect =              FALSE;
+integer followSource =              FALSE;
+integer followTarget =              FALSE;
+integer pattern =                   PSYS_SRC_PATTERN_ANGLE_CONE;
+key     target;
+setParticles()
+{
+// Here is where to set the current target to any valid key
+//    target=llGetKey();    //Targets the emitter
+//    target=llGetOwner();  //Targets the owner
+
+// The following if statements are used to construct the mask 
+    if (colorInterpolation) effectFlags = effectFlags|PSYS_PART_INTERP_COLOR_MASK;
+    if (sizeInterpolation)  effectFlags = effectFlags|PSYS_PART_INTERP_SCALE_MASK;
+    if (windEffect)         effectFlags = effectFlags|PSYS_PART_WIND_MASK;
+    if (bounceEffect)       effectFlags = effectFlags|PSYS_PART_BOUNCE_MASK;
+    if (followSource)       effectFlags = effectFlags|PSYS_PART_FOLLOW_SRC_MASK;
+    if (followVelocity)     effectFlags = effectFlags|PSYS_PART_FOLLOW_VELOCITY_MASK;
+    if (target!="")       effectFlags = effectFlags|PSYS_PART_TARGET_POS_MASK;
+    if (glowEffect)         effectFlags = effectFlags|PSYS_PART_EMISSIVE_MASK;
+    llParticleSystem([
+        PSYS_PART_FLAGS,            effectFlags,
+        PSYS_SRC_PATTERN,           pattern,
+        PSYS_PART_START_COLOR,      startColor,
+        PSYS_PART_END_COLOR,        endColor,
+        PSYS_PART_START_ALPHA,      startAlpha,
+        PSYS_PART_END_ALPHA,        endAlpha,
+        PSYS_PART_START_SCALE,      startSize,
+        PSYS_PART_END_SCALE,        endSize,    
+        PSYS_PART_MAX_AGE,          particleLife,
+        PSYS_SRC_ACCEL,             acceleration,
+        PSYS_SRC_TEXTURE,           texture,
+        PSYS_SRC_BURST_RATE,        emissionRate,
+        PSYS_SRC_ANGLE_BEGIN,       beginAngle,
+        PSYS_SRC_ANGLE_END,        endAngle,
+        PSYS_SRC_BURST_PART_COUNT,  partPerEmission,      
+        PSYS_SRC_BURST_RADIUS,      radius,
+        PSYS_SRC_BURST_SPEED_MIN,   minSpeed,
+        PSYS_SRC_BURST_SPEED_MAX,   maxSpeed, 
+        PSYS_SRC_MAX_AGE,           SystemLife,
+        PSYS_SRC_TARGET_KEY,        target,
+        PSYS_SRC_OMEGA,             omega   ]);
+}
+
+reloadColors()
+{
+    llWhisper(0, "Beginning to load colors...");
+    colorlist = [];
+    startcolors = [];
+    endcolors = [];
+    readyfornext = 1;
+    llGetNotecardLine("Color List", currentlineno);
+    listening = 0;
+    llListenRemove(Handle);
+}
+    
+checkForColor(string message)
+{
+    integer length = llGetListLength(colorlist);
+    integer n;
+    if (llSubStringIndex(listofcolors, message) > -1)
+    {
+        for (n = 0; n < length; n++)
+        {
+            string currentcolor = llList2String(colorlist, n);
+            currentcolor = llToLower(currentcolor);
+            if (message == currentcolor)
+            {
+                startColor = (vector)llList2String(startcolors, n);
+                endColor = (vector)llList2String(endcolors, n);
+                repetition();
+            }
+        }
+    }
+}
+
+repetition()
+{
+    running = TRUE;
+    llParticleSystem([]);
+    setParticles();
+    listening = FALSE;
+    llListenRemove(Handle);    
+}
+
+default
+{
+    state_entry()
+    {
+    }
+    on_rez(integer start_param)
+    {
+         running = FALSE;
+         reloadColors();
+    }
+
+    touch_start(integer total_number)
+    {
+        
+        if (cycling == 0)
+        {
+            if (private == TRUE)
+            {
+                llListenRemove(Handle);
+                Handle = llListen(0, "", llGetOwner(), "");
+            }
+            if (private == FALSE)
+            {
+               llListenRemove(Handle);
+            Handle = llListen(0, "", NULL_KEY, "");
+            }
+            if (listening != TRUE)
+            {
+                llSay(0, "Your command? Say 'list' for a list of commands.");
+                listening = TRUE;
+                if (private == TRUE)
+                {
+                    Handle = llListen(0, "", llGetOwner(), "");
+                }
+                else if (private == FALSE)
+                {
+                    Handle = llListen(0, "", NULL_KEY, "");
+                }
+            }
+        
+            else if (listening == TRUE)
+            {
+                llSay(0, "Cancelling.");
+                listening = FALSE;
+                llListenRemove(Handle); 
+            }
+        }
+        else
+        {
+            cycling = 0;
+            llSay(0, "Cycling off, returning to normal mode.");
+            llSetTimerEvent(0);
+        }
+        
+    }
+    listen( integer channel, string name, key id, string message )
+    {        
+        if (listening == 1)
+        {
+                
+            checkForColor(message);
+             
+            if (message == "reload")
+            {
+                reloadColors();
+            }
+            
+            if (message == "off")
+            {
+                running == FALSE;
+                llParticleSystem([]);
+                listening = 0;
+                llListenRemove(Handle);     
+            }
+            
+            if (message == "list")
+            {
+                string colorslist = "Acceptable colors are: ";
+                integer listlength = llGetListLength(colorlist);
+                integer index;
+                for (index = 0; index < listlength; index++)
+                {
+                    colorslist += llList2String(colorlist, index);
+                    if (index < listlength - 1)
+                        colorslist += ", ";
+                    else
+                        colorslist += ".";          
+                }
+                llSay(0, colorslist);
+                llSay(0, "Other commands are: off, private, public, setcycle, startcycle.");
+                    
+            }
+            
+            if ((message == "private") && (id == llGetOwner()))
+            {
+                llSay(0, "Privacy enabled. Torch will only respond to owner.");
+                private = TRUE;
+                listening = 0;
+                llListenRemove(Handle); 
+            }
+            
+            if ((message == "public") && (id == llGetOwner()))
+            {
+                llSay(0, "Public mode enabled. Torch will respond to anyone.");
+                private = FALSE;
+                listening = 0;
+                llListenRemove(Handle); 
+            }
+            
+            if ((message == "setcycle") && (id == llGetOwner()))
+            {
+                llWhisper(0, "Very well. Starting the cycling program...");
+                cyclelength= 0;
+                cyclelist = [];
+                llWhisper(0, "Please enter the first color to cycle, or a 'end' line to finish.");
+                listening = 2;                
+            }
+            if ((message == "startcycle") && (id == llGetOwner()))
+            {
+                llSay(0, "Beginning cycle.");
+                llSetTimerEvent(0);
+                llSetTimerEvent(cycledelay);
+                currentcycle = 0;
+                listening = 0;
+                llListenRemove(Handle);
+                cycling = 1;
+            }
+
+        }   
+        else if ((listening == 2) && (id == llGetOwner()))
+        {
+            if (message != "end")
+            {  
+                integer n;
+                integer length = llGetListLength(colorlist);
+                integer found = 0;
+                for (n = 0; n < length; n++)
+                {
+                    string currentcolor = llList2String(colorlist, n);
+                    currentcolor = llToLower(currentcolor);
+                    if (message == currentcolor)
+                    {
+                        cyclelist += [message];
+                        found = 1;
+                        llWhisper(0, "Please enter next color, or 'end' to finish.");
+                        cyclelength++;
+                    }
+                }
+                if (found == 0)
+                    llWhisper(0, "That color is not recognized, please enter a valid color.");
+                if (found == 1)
+                    found = 0;  
+            }
+            else if (message == "end")
+            {
+                llWhisper(0, "List of cycle colors complete, please enter number of seconds between cycling colors.");
+                listening = 3;                
+            }
+        }
+        else if ((listening == 3) && (id == llGetOwner()))
+        {
+            cycledelay = (float)message;
+            llWhisper(0, "All set! Please say 'startcycle' to start the color cycle.");
+            listening = 1;               
+        }
+    }
+    
+    dataserver(key queryid, string data) 
+    {
+        if (data != EOF)
+        {
+            currentline = data;
+            integer n;
+            integer o;
+            string scolor;
+            string ecolor;
+            string colorname;
+            n = llSubStringIndex(currentline, "/");
+            o = llSubStringIndex(currentline, "|");
+            colorname = llGetSubString(currentline, 0, n - 1);
+            scolor = llGetSubString(currentline, n + 1, o - 1);
+            ecolor = llGetSubString(currentline, o + 1, llStringLength(currentline) - 1);
+            colorlist = colorlist + [colorname];
+            startcolors = startcolors + [scolor];
+            endcolors = endcolors + [ecolor];
+            listofcolors += colorname;
+            currentlineno++;
+            readyfornext = 1;
+            llGetNotecardLine("Color List", currentlineno);
+        }
+        else
+        {
+            llWhisper(0, "Loading complete!");
+            currentlineno = 0;
+            readyfornext = 0;
+            listening == 0;
+            llListenRemove(Handle);
+        }
+    }
+    
+    timer()
+    {
+        integer length = llGetListLength(colorlist);
+        if (currentcycle > cyclelength - 1)
+        {
+            currentcycle = 0;
+        }
+        integer n; 
+        string desired = llList2String(cyclelist, currentcycle);
+        for (n = 0; n < length; n++)
+        {
+            if (llList2String(colorlist, n) == desired)
+            {
+                startColor = (vector)llList2String(startcolors, n);
+                endColor = (vector)llList2String(endcolors, n);
+                repetition();
+            }
+        }                
+        currentcycle++;        
+    }        
+}
