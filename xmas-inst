@@ -1,0 +1,18 @@
+Here are instructions for using this Christmas gift.
+
+1. Rez gift in front of you
+2. Click gift
+3. If you wish for the gift to be opened on a date other than Christmas, say "!date" without the quotations and follow instructions.
+4. Type the name (exact name!) of the person to whom you're giving the gift.
+5. Type "yes" if the displayed name is correct, or "no" if you'd like to re-enter it.
+6. Take the package and give it to the person, or simply place it under their Christmas tree!
+
+When set, the gift will be openable only by the specified player, and only on or after Christmas (or the date specified in step 3).
+
+Please note that this gift will only give OBJECTS placed inside it! If you give it scripts, clothing, etc, and the person opens the gift, anything other than objects within it will perish along with the gift when it dies after being opened. If you'd like to give clothing or scripts or something as a gift, put those items in a separate prim, then put that in the gift.
+
+Also note this gift will give all objects found within it, so you aren't limited in how many objects it will give. Well, theoretically, you are, but I don't know what the ceiling is. Probably in the hundreds.
+
+This script is free to distribute, copy, and use by anyone. I hope you find this useful!
+
+-Doalyn Vogel
