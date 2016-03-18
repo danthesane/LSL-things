@@ -1,0 +1,36 @@
+Congratulations on purchasing a color changing torch from Pyrotech! Here's how to get the most out of your purchase:
+
+Basic Features -------------------------------------------
+
+When first rezzing the torch, allow it to go through it's notecard of colors and load each one into memory. Wait until it declares that it's finished loading before touching it. After that, go ahead and click once to get it to start listening. If you click it by mistake, you can make it stop listening by clicking again.
+
+When it prompts for a command, feel free to type in the name of any color on the list. You can see the available colors by typing "list". Typing the name of any color on the list at this point will create a flame of that color. Also at this point, you may use the following commands:
+
+"off"---------This command will turn off any flame currently burning.
+"public"------This will allow the torch to respond to anyone's commands, not just your own.
+"private"-----This will make the torch listen only to your commands.
+"setcycle"----Begins the color cycle definition program, described subsequently.
+"startcycle"--Starts the designated color cycle.
+
+Advanced Features -------------------------------------
+
+Custom colors:
+
+You can designate your own colors for flame effects! That's right; if you don't like the selection we've made available, just add your own! Here is the syntax for doing so:
+
+(name of color)/<base of flame color vector>|<tip of flame color vector>
+
+Examples:
+
+red/<1.0, 0.75, 0.75>|<1.0, 0.0, 0.0>
+fire/<1.0, 1.0, 0.0>|<1.0, 0.0, 0.0>
+
+Simply add lines formatted thusly to the end of the notecard file already provided.
+
+Color cycles:
+
+There is an integrated color cycling program set in each product we sell. Begin the designation program by typing in "setcycle" at the prompt (after clicking torch).
+
+You will be prompted to give the first color. Give the colors, in the order you want them to flash, one line at a time. Once finished giving colors, type "end". You will then be prompted for the number of seconds between cycles. You can use a decimal here if you like, it does not have to be an integer. Once you're all set, type "startcycle" to begin the cycle.
+
+End the cycle by clicking on the torch.
