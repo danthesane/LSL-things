@@ -1,0 +1,242 @@
+list values = []; 
+string msgCategory;
+integer msgInteger;
+float msgFloat;
+vector msgVector;
+string msgString;
+integer Handle;
+integer Handle3;
+integer thinger = 0;
+integer numberon = 1;
+integer Handle2;
+integer private = TRUE;
+integer listening = FALSE;
+integer effectFlags;
+integer running;
+integer colorInterpolation =        FALSE;
+integer sizeInterpolation =         FALSE;
+integer glowEffect =                FALSE;
+integer followVelocity =            FALSE;
+integer windEffect =                FALSE;
+integer bounceEffect =              FALSE;
+integer followSource =              FALSE;
+integer followTarget =              FALSE;
+vector  startColor =                <0, 0.0, 0>;
+vector  endColor =                  <0, 0.0, 0>;
+float   startAlpha =                1.0;
+float   endAlpha =                  1.0;
+vector  startSize =                 <0.5, 0.5, 0.0>;
+vector  endSize =                   <0.5, 0.5, 0.0>;
+string  texture =                   "";
+float   particleLife =              1;
+float   systemLife =                0.0;
+float   emissionRate =              .5;
+integer partPerEmission =           10;
+float   radius =                    0.10;
+float   beginAngle =                0.0;
+float   endAngle =                  TWO_PI;
+vector  omega =                     <0.0, 0.0, 0.0>;
+float   minSpeed =                  0.2;
+float   maxSpeed =                  1.00;
+vector  acceleration =              <0.0, 0.0, 0.5>;
+
+integer pattern =                   PSYS_SRC_PATTERN_ANGLE_CONE;
+key     target;
+
+string parseMsg(string text) 
+{
+    msgCategory = llGetSubString(text,0,2);
+    if (msgCategory == "SIN" || msgCategory == "CIN" || msgCategory == "FVE" || msgCategory == "GLO" || msgCategory == "WIN" || msgCategory == "BOU" || msgCategory == "FSO" || msgCategory == "FTA")
+    {
+        msgInteger = (integer)llGetSubString(text,3,3);
+        claimBool(msgInteger);       
+    }
+    if (msgCategory == "SCO" || msgCategory == "ECO" || msgCategory == "PSS" || msgCategory == "PES" || msgCategory == "AVE" || msgCategory == "ACC")
+    {
+        integer templength = llStringLength(text) - 1;
+        msgVector = (vector)llGetSubString(text,3,templength);
+        claimVector(msgVector);
+    }
+    if (msgCategory == "BAN" || msgCategory == "EAN" || msgCategory == "EAL" || msgCategory == "SAL" || msgCategory == "PLI" || msgCategory == "SLI" || msgCategory == "ERA" || msgCategory == "RAD" || msgCategory == "MSP" || msgCategory == "MXS")
+    {
+        msgFloat = (float)llGetSubString(text,3,11);
+        claimFloat(msgFloat);
+                
+    }
+    if (msgCategory == "PPE" || msgCategory == "PAT")
+    {
+        integer templength = llStringLength(text) - 1;
+        msgInteger = (integer)llGetSubString(text,3,templength);
+        claimInteger(msgInteger);
+    }
+    if (msgCategory == "FTD" || msgCategory == "TXD")
+    {
+        integer tempint = llStringLength(text) - 1;
+        msgString = llGetSubString(text,3,tempint);
+        claimString(msgString);
+    }
+    
+    return "";
+}
+
+integer claimBool(integer shit)
+{
+    if (msgCategory == "SIN")
+        sizeInterpolation = shit;
+    else if (msgCategory == "CIN")
+        colorInterpolation = shit;
+    else if (msgCategory == "FVE")
+        followVelocity = shit;
+    else if (msgCategory == "GLO")
+        glowEffect = shit;
+    else if (msgCategory == "WIN")
+        windEffect = shit;
+    else if (msgCategory == "BOU")
+        bounceEffect = shit;
+    else if (msgCategory == "FSO")
+        followSource = shit;
+    else if (msgCategory == "FTA")
+        followTarget = shit;
+    llParticleSystem([]);
+    setParticles();
+    return 0;
+}
+
+integer claimVector(vector shit)
+{
+    if (msgCategory == "SCO")
+        startColor = msgVector;
+    if (msgCategory == "ECO")
+        endColor = msgVector;
+    if (msgCategory == "PSS")
+        startSize = msgVector;
+    if (msgCategory == "PES")
+        endSize = msgVector;
+    if (msgCategory == "AVE")
+        omega = msgVector;
+    if (msgCategory == "ACC")
+        acceleration = msgVector;    
+    llParticleSystem([]);
+    setParticles();
+    return 0;
+}
+
+integer claimFloat(float shit)
+{
+    if (msgCategory == "PLI")
+       particleLife = msgFloat;
+    if (msgCategory == "SLI")
+        systemLife = msgFloat;
+    if (msgCategory == "ERA")
+        emissionRate = msgFloat;
+    if (msgCategory == "RAD")
+        radius = msgFloat;
+    if (msgCategory == "MSP")
+        minSpeed = msgFloat;
+    if (msgCategory == "MXS")
+        maxSpeed = msgFloat;
+    if (msgCategory == "EAL")
+        endAlpha = shit;
+    if (msgCategory == "SAL")
+        startAlpha = shit;
+    if (msgCategory == "BAN")
+        beginAngle = shit;
+    if (msgCategory == "EAN")
+        endAngle = shit;
+    llParticleSystem([]);
+    setParticles();
+    return 0;
+}
+
+integer claimInteger(integer shit)
+{
+    
+    if (msgCategory == "PPE")
+        partPerEmission = shit;
+    if (msgCategory == "PAT")
+        pattern = shit;
+    
+    llParticleSystem([]);
+    setParticles();
+    return 0;
+}
+
+integer claimString(string shit)
+{
+    if (msgCategory == "FTD")
+        target = shit;
+    if (msgCategory == "TXD")
+        texture = shit;
+    llParticleSystem([]);
+    setParticles();
+    return 0;
+}
+        
+
+setParticles()
+{
+// Here is where to set the current target to any valid key
+//    target=llGetKey();    //Targets the emitter
+//    target=llGetOwner();  //Targets the owner
+
+// The following if statements are used to construct the mask 
+    if (colorInterpolation) effectFlags = effectFlags|PSYS_PART_INTERP_COLOR_MASK;
+    if (sizeInterpolation)  effectFlags = effectFlags|PSYS_PART_INTERP_SCALE_MASK;
+    if (windEffect)         effectFlags = effectFlags|PSYS_PART_WIND_MASK;
+    if (bounceEffect)       effectFlags = effectFlags|PSYS_PART_BOUNCE_MASK;
+    if (followSource)       effectFlags = effectFlags|PSYS_PART_FOLLOW_SRC_MASK;
+    if (followVelocity)     effectFlags = effectFlags|PSYS_PART_FOLLOW_VELOCITY_MASK;
+    if (target!="")       effectFlags = effectFlags|PSYS_PART_TARGET_POS_MASK;
+    if (glowEffect)         effectFlags = effectFlags|PSYS_PART_EMISSIVE_MASK;
+    llParticleSystem([
+        PSYS_PART_FLAGS,            effectFlags,
+        PSYS_SRC_PATTERN,           pattern,
+        PSYS_PART_START_COLOR,      startColor,
+        PSYS_PART_END_COLOR,        endColor,
+        PSYS_PART_START_ALPHA,      startAlpha,
+        PSYS_PART_END_ALPHA,        endAlpha,
+        PSYS_PART_START_SCALE,      startSize,
+        PSYS_PART_END_SCALE,        endSize,    
+        PSYS_PART_MAX_AGE,          particleLife,
+        PSYS_SRC_ACCEL,             acceleration,
+        PSYS_SRC_TEXTURE,           texture,
+        PSYS_SRC_BURST_RATE,        emissionRate,
+        PSYS_SRC_ANGLE_BEGIN,       beginAngle,
+        PSYS_SRC_ANGLE_END,        endAngle,
+        PSYS_SRC_BURST_PART_COUNT,  partPerEmission,      
+        PSYS_SRC_BURST_RADIUS,      radius,
+        PSYS_SRC_BURST_SPEED_MIN,   minSpeed,
+        PSYS_SRC_BURST_SPEED_MAX,   maxSpeed, 
+        PSYS_SRC_MAX_AGE,           systemLife,
+        PSYS_SRC_TARGET_KEY,        target,
+        PSYS_SRC_OMEGA,             omega   ]);
+}
+
+default
+{
+    state_entry()
+    {
+        Handle = llListen(401, "", NULL_KEY, "");
+        Handle2 = llListen(402,"",NULL_KEY,"");
+        Handle3 = llListen(400,"",NULL_KEY,"");
+        
+    }
+    on_rez(integer start_param)
+    {
+         llResetScript(); 
+    }
+
+    listen( integer channel, string name, key id, string message )
+    {
+        if (channel == 401)
+        {
+            parseMsg(message);           
+        }
+            
+        if (message == "deactivate")
+        {
+            llParticleSystem([]);
+        }
+                
+    }
+}
