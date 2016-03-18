@@ -21,7 +21,7 @@ You can designate your own colors for flame effects! That's right; if you don't 
 (name of color)/<base of flame color vector>|<tip of flame color vector>
 
 Examples:
-
+ 
 red/<1.0, 0.75, 0.75>|<1.0, 0.0, 0.0>
 fire/<1.0, 1.0, 0.0>|<1.0, 0.0, 0.0>
 
