@@ -1,0 +1,172 @@
+//Christmas gift skript 1.0
+//By Doalyn Vogel
+//Free to copy, but don't sell!
+
+integer Handle;
+string giver;
+string opendate;
+integer listening1 = FALSE;
+integer listening2 = FALSE;
+integer listening3 = FALSE;
+integer sealed;
+string recepient;
+string recepienttemp;
+integer length;
+string date;
+
+default
+{
+    state_entry()
+    {
+        sealed = FALSE;
+        opendate = "2004-12-25";
+        Handle = 99;
+        recepient = "no-one";
+    }
+    on_rez(integer start_param)
+    {
+        if (sealed != TRUE)
+        {
+            llSay(0, "Hi! Please place an item into me using the content tab of the edit window.");
+            llSay(0, "When you've done that, click me to seal me up!");
+        }
+        else
+        {
+            llSay(0, "Merry Christmas from " + giver + "!");
+        }        
+    }
+
+    touch_start(integer total_number)
+    {
+        if (sealed == FALSE)
+        {
+            llSay(0, "Type in the exact name of the person who is to receive this gift.");
+            llSay(0, "Be sure to type their name exactly, including capitals!");
+            Handle = llListen(0, "", llGetOwner(), "");
+            listening1 = TRUE;
+            sealed = TRUE;
+        }
+        else
+        {
+            if (recepient == "no-one")
+            {
+                llSay(0, "Recipient not set, cancelling process.");
+                sealed = FALSE;
+                listening1 = FALSE;
+                listening2 = FALSE;
+            }
+            else
+            {
+                integer correctdate = FALSE;
+                if (llDetectedName(0) != recepient)
+                {
+                    llSay(0, "This present is not for you!");
+                }
+                else if (llDetectedName(0) == recepient)
+                {
+                    date = llGetDate();
+                    string year = llGetSubString(date,0,3);
+                    string month = llGetSubString(date, 6,7);
+                    string day = llGetSubString(date,8,9);
+                    
+                    if ((integer)year > (integer)llGetSubString(opendate,0,3))
+                    {
+                        correctdate = TRUE;
+                    }
+                    else if ((integer)year == (integer)llGetSubString(opendate,0,3))
+                    {
+                        if ((integer)month > (integer)llGetSubString(opendate,6,7))
+                        {
+                            correctdate = TRUE;
+                        }
+                        else if ((integer)month == (integer)llGetSubString(opendate,6,7))
+                        {
+                            if ((integer)day >= (integer)llGetSubString(opendate,8,9))
+                            {
+                                correctdate = TRUE;
+                            }
+                            else
+                            {
+                                correctdate = FALSE;
+                            }
+                        }
+                        else
+                        {
+                            correctdate = FALSE;
+                        }                             
+                    }
+                    else
+                    {
+                        correctdate = FALSE;
+                    }                    
+                    if (correctdate == TRUE)
+                    {
+                        integer n = 0;
+                        llSay(0,"Merry Christmas!");
+                        for (n = 0; n < llGetInventoryNumber(INVENTORY_OBJECT); n++)
+                        {
+                            llGiveInventory(llDetectedKey(0),llGetInventoryName(INVENTORY_OBJECT, n));
+                        }
+                        llDie();
+                    }
+                    else
+                    {
+                        llSay(0, "It's not time to open this yet!");
+                        llSay(0, "Wait for " + opendate);
+                    }
+                }
+            }
+        }
+    }
+    listen( integer channel, string name, key id, string message )
+    {
+        if (listening1 == TRUE)
+        {
+            if (message != "!date")
+            {
+                recepienttemp = message;
+                llSay(0, "So you want to give this gift to " + recepienttemp + "?");
+                llSay(0, "Is this correct? Say yes or no.");
+                listening1 = FALSE;
+                listening2 = TRUE;
+            }
+            else
+            {
+                llSay(0, "Please enter date that this present will be able to be opened, in YYYY-MM-DD format.");
+                listening3 = TRUE;
+                listening1 = FALSE;
+                listening2 = FALSE;
+            }
+                       
+        }
+        else if (listening2 == TRUE)
+        {
+            if (message == "yes")
+            {
+                recepient = recepienttemp;
+                giver = llKey2Name(llGetOwner());
+                llSetObjectDesc("A gift from " + giver + " to " + recepient);
+                llSetObjectName("Christmas Gift to " + recepient);
+                llSay(0, "Recepient " + recepient + " set!");
+                llSay(0, "Now just give this to them and wish them a Merry Christmas.");
+                listening1 = FALSE;
+                listening2 = FALSE;
+                llListenRemove(Handle); 
+            }
+            else if (message == "no")
+            {
+                llSay(0, "Then please re-enter their name now.");
+                listening2 = FALSE;
+                listening1 = TRUE;
+            }
+        }
+        else if (listening3 == TRUE)
+        {
+            opendate = message;
+            llSay(0, "Open date set to " + opendate);
+            listening3 = FALSE;
+            llListenRemove(Handle);
+            sealed = FALSE;
+        }
+    }
+}
